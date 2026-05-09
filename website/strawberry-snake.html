@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#080612" />
+  <title>Strawberry Signal Snake — DeepSeek V4 Pro Arcade</title>
+  <style>
+    :root {
+      --bg: #070611;
+      --panel: rgba(11, 10, 28, 0.74);
+      --panel-strong: rgba(17, 8, 35, 0.92);
+      --cyan: #22f7ff;
+      --pink: #ff2e9f;
+      --berry: #ff466d;
+      --gold: #ffd166;
+      --green: #66ff99;
+      --ink: #f7f4ff;
+      --muted: #a9a1c7;
+      --danger: #ff214f;
+      --shadow: 0 0 24px rgba(255, 46, 159, .36), 0 0 48px rgba(34, 247, 255, .18);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+    body {
+      background:
+        radial-gradient(circle at 20% 12%, rgba(255, 46, 159, .26), transparent 30%),
+        radial-gradient(circle at 78% 22%, rgba(34, 247, 255, .22), transparent 35%),
+        linear-gradient(135deg, #090510 0%, #070611 48%, #10061e 100%);
+      touch-action: none;
+    }
+    .backdrop {
+      position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(7, 6, 17, .28), rgba(7, 6, 17, .66)), url('assets/strawberry-snake/neon_oracle_city_mech_1920x1080.png');
+      background-size: cover; background-position: center;
+      filter: saturate(1.25) contrast(1.08) brightness(.62);
+      transform: scale(1.02);
+      z-index: 0;
+    }
+    .backdrop::after {
+      content: ""; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(34,247,255,.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,46,159,.08) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+      animation: gridDrift 12s linear infinite;
+    }
+    @keyframes gridDrift { to { background-position: 48px 48px; } }
+    .crt {
+      pointer-events: none; position: fixed; inset: 0; z-index: 8;
+      background:
+        repeating-linear-gradient(to bottom, rgba(255,255,255,.055) 0 1px, transparent 1px 4px),
+        radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,.52) 100%);
+      mix-blend-mode: screen; opacity: .42;
+    }
+    .crt::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, rgba(255,0,128,.035), rgba(0,255,255,.025), rgba(255,255,0,.025));
+      animation: flicker 2.8s steps(8, end) infinite;
+    }
+    @keyframes flicker { 50% { opacity: .58; } }
+    .app { position: relative; z-index: 2; height: 100%; display: grid; grid-template-rows: auto 1fr auto; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); gap: 10px; }
+    header, footer, .side-panel, .overlay-card {
+      border: 1px solid rgba(34,247,255,.32); border-radius: 18px; background: var(--panel); backdrop-filter: blur(16px) saturate(1.3); box-shadow: var(--shadow);
+    }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; min-height: 72px; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand img { width: 54px; height: 54px; object-fit: contain; filter: drop-shadow(0 0 14px rgba(255,46,159,.75)); image-rendering: pixelated; }
+    h1 { margin: 0; font: 900 clamp(1.05rem, 3.1vw, 2.15rem)/1 var(--mono); text-transform: uppercase; letter-spacing: .04em; text-shadow: 0 0 12px var(--pink), 0 0 24px rgba(34,247,255,.55); }
+    .subtitle { margin-top: 4px; color: var(--muted); font: 700 .76rem/1.25 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .scoreboard { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .stat { min-width: 78px; padding: 8px 10px; border-radius: 14px; background: rgba(0,0,0,.32); border: 1px solid rgba(255,46,159,.28); text-align: center; font-family: var(--mono); }
+    .stat b { display:block; color: var(--gold); font-size: clamp(1rem, 2.2vw, 1.35rem); }
+    .stat span { color: var(--muted); font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; }
+    main { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 10px; }
+    .stage { min-height: 0; position: relative; display: grid; place-items: center; border-radius: 22px; overflow: hidden; background: rgba(4,3,15,.64); border: 1px solid rgba(255,46,159,.3); box-shadow: inset 0 0 80px rgba(255,46,159,.08), var(--shadow); }
+    canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+    .overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 22px; background: radial-gradient(circle at center, rgba(9, 4, 20, .34), rgba(5,3,12,.82)); transition: opacity .2s ease; }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+    .overlay-card { width: min(560px, 94vw); padding: 24px; text-align: center; background: var(--panel-strong); }
+    .overlay-card h2 { margin: 0 0 10px; font: 900 clamp(1.45rem, 5vw, 3rem)/.95 var(--mono); text-transform: uppercase; color: #fff; text-shadow: 0 0 18px var(--pink), 0 0 36px rgba(34,247,255,.55); }
+    .overlay-card p { margin: 8px 0 18px; color: var(--muted); line-height: 1.5; }
+    .side-panel { padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+    .panel-title { color: var(--cyan); font: 900 .85rem/1 var(--mono); text-transform: uppercase; letter-spacing: .1em; }
+    .mission { margin: 0; color: var(--muted); font-size: .92rem; line-height: 1.45; }
+    .meter { height: 14px; border-radius: 99px; background: rgba(255,255,255,.08); border: 1px solid rgba(34,247,255,.28); overflow: hidden; }
+    .meter i { display:block; height:100%; width:0%; background: linear-gradient(90deg, var(--berry), var(--gold), var(--cyan)); box-shadow: 0 0 16px rgba(255,46,159,.7); transition: width .18s ease; }
+    .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 220px; margin: 0 auto; }
+    button { appearance: none; border: 1px solid rgba(34,247,255,.48); border-radius: 14px; color: var(--ink); background: linear-gradient(180deg, rgba(255,46,159,.22), rgba(34,247,255,.1)); min-height: 44px; padding: 10px 12px; font: 900 .8rem/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 16px rgba(34,247,255,.12); }
+    button:hover, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-color: var(--gold); box-shadow: 0 0 22px rgba(255,209,102,.38); }
+    button:active { transform: translateY(1px) scale(.99); }
+    .wide { grid-column: 1 / -1; }
+    .empty { visibility: hidden; }
+    .hotkeys { display: grid; gap: 6px; color: var(--muted); font: 700 .72rem/1.35 var(--mono); }
+    .hotkeys kbd { color: var(--gold); border: 1px solid rgba(255,209,102,.4); border-radius: 6px; padding: 1px 5px; background: rgba(0,0,0,.26); }
+    footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; color: var(--muted); font: 700 .72rem/1.3 var(--mono); }
+    footer a { color: var(--cyan); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 900px) {
+      .app { gap: 8px; padding: 8px; }
+      header { min-height: 64px; }
+      .brand img { width: 44px; height: 44px; }
+      .subtitle { display: none; }
+      main { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+      .side-panel { max-height: 220px; display: grid; grid-template-columns: 1fr 220px; align-items: start; }
+      .hotkeys { display: none; }
+      footer { display: none; }
+    }
+    @media (max-width: 560px) {
+      .scoreboard { gap: 5px; }
+      .stat { min-width: 58px; padding: 6px; }
+      .stat span { font-size: .55rem; }
+      .side-panel { grid-template-columns: 1fr; max-height: 260px; }
+      button { min-height: 40px; padding: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .crt { opacity: .24; } }
+  </style>
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <div class="crt" aria-hidden="true"></div>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <img src="assets/strawberry-snake/shy_strawberry_big.png" alt="Shy strawberry mascot" />
+        <div>
+          <h1>Strawberry Signal Snake</h1>
+          <div class="subtitle">DeepSeek V4 Pro • berry-radio arcade bootleg</div>
+        </div>
+      </div>
+      <div class="scoreboard" aria-label="Game stats">
+        <div class="stat"><b id="score">0</b><span>score</span></div>
+        <div class="stat"><b id="level">1</b><span>level</span></div>
+        <div class="stat"><b id="best">0</b><span>best</span></div>
+        <div class="stat"><b id="speed">1x</b><span>signal</span></div>
+      </div>
+    </header>
+    <main>
+      <section class="stage" aria-label="Playable cyberpunk strawberry Snake canvas. Use arrow keys, WASD, swipe, or direction buttons.">
+        <canvas id="game" width="960" height="720"></canvas>
+        <div class="overlay" id="overlay">
+          <div class="overlay-card">
+            <h2 id="overlayTitle">Berry Signal Found</h2>
+            <p id="overlayText">Eat glitch strawberries, grow the neon signal, dodge firewall pylons, and keep the radio stream alive.</p>
+            <button id="primaryAction">Start Run</button>
+          </div>
+        </div>
+      </section>
+      <aside class="side-panel">
+        <div>
+          <div class="panel-title">Mission Feed</div>
+          <p class="mission" id="mission">Collect <b id="target">5</b> cyber-strawberries to unlock the next transmission. Gold = AI life.</p>
+          <div class="meter" aria-label="Level progress"><i id="meter"></i></div>
+        </div>
+        <div class="controls" aria-label="Touch controls">
+          <span class="empty"></span><button data-dir="up" aria-label="Move up">▲</button><span class="empty"></span>
+          <button data-dir="left" aria-label="Move left">◀</button><button id="pauseBtn" aria-label="Pause or resume">Pause</button><button data-dir="right" aria-label="Move right">▶</button>
+          <span class="empty"></span><button data-dir="down" aria-label="Move down">▼</button><span class="empty"></span>
+          <button class="wide" id="restartBtn" aria-label="Restart game">Restart</button>
+        </div>
+        <div class="hotkeys">
+          <div><kbd>Arrow</kbd>/<kbd>WASD</kbd> steer the strawberry signal.</div>
+          <div><kbd>Space</kbd>/<kbd>P</kbd> pause. <kbd>R</kbd> restart.</div>
+          <div>Swipe works on phone. High score saves locally only.</div>
+        </div>
+      </aside>
+    </main>
+    <footer>
+      <span>Built from local Jimsky/Sonic-Forage assets — no telemetry, no network calls.</span>
+      <a href="./">Back to DeepSeek TUI</a>
+    </footer>
+  </div>
+  <div class="sr-only" id="live" aria-live="polite"></div>
+  <script>
+    (() => {
+      'use strict';
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const scoreEl = document.getElementById('score');
+      const levelEl = document.getElementById('level');
+      const bestEl = document.getElementById('best');
+      const speedEl = document.getElementById('speed');
+      const targetEl = document.getElementById('target');
+      const meterEl = document.getElementById('meter');
+      const missionEl = document.getElementById('mission');
+      const overlay = document.getElementById('overlay');
+      const overlayTitle = document.getElementById('overlayTitle');
+      const overlayText = document.getElementById('overlayText');
+      const primaryAction = document.getElementById('primaryAction');
+      const pauseBtn = document.getElementById('pauseBtn');
+      const restartBtn = document.getElementById('restartBtn');
+      const live = document.getElementById('live');
+
+      const GRID_W = 32;
+      const GRID_H = 24;
+      const KEY = 'strawberrySignalSnakeBest';
+      const DIRS = {
+        up: {x:0, y:-1}, down: {x:0, y:1}, left: {x:-1, y:0}, right: {x:1, y:0}
+      };
+      const imgFood = new Image();
+      imgFood.src = 'assets/strawberry-snake/shy_strawberry_big.png';
+      const imgMascot = new Image();
+      imgMascot.src = 'assets/strawberry-snake/strawberry_logo_dude_09_cyber_shamanic_command_deck.png';
+
+      let state, snake, dir, nextDir, food, hazards, score, best, level, eatenThisLevel, target, tickMs, acc, last, pulse, startTouch;
+
+      function loadBest() {
+        const raw = Number(localStorage.getItem(KEY) || 0);
+        return Number.isFinite(raw) ? raw : 0;
+      }
+      function saveBest() {
+        if (score > best) {
+          best = score;
+          localStorage.setItem(KEY, String(best));
+        }
+      }
+      function reset(all = true) {
+        state = 'TITLE';
+        snake = [{x: 8, y: 12}, {x: 7, y: 12}, {x: 6, y: 12}, {x: 5, y: 12}];
+        dir = DIRS.right;
+        nextDir = DIRS.right;
+        score = all ? 0 : score;
+        level = all ? 1 : level;
+        eatenThisLevel = 0;
+        target = 4 + level;
+        hazards = buildHazards(level);
+        tickMs = Math.max(74, 145 - level * 11);
+        food = spawnFreeCell();
+        acc = 0; last = 0; pulse = 0;
+        best = loadBest();
+        updateHud();
+        showOverlay('Berry Signal Found', 'Eat glitch strawberries, grow the neon signal, dodge firewall pylons, and keep the radio stream alive.', 'Start Run');
+        draw();
+      }
+      function startGame() {
+        if (state === 'LEVEL_WIN') nextLevel();
+        else if (state === 'GAME_OVER' || state === 'TITLE') {
+          if (state === 'GAME_OVER') reset(true);
+          state = 'PLAYING';
+          hideOverlay();
+          announce('Run started. Collect strawberries.');
+        }
+      }
+      function nextLevel() {
+        level++;
+        eatenThisLevel = 0;
+        target = 4 + level;
+        tickMs = Math.max(58, 145 - level * 11);
+        snake = [{x: 8, y: 12}, {x: 7, y: 12}, {x: 6, y: 12}, {x: 5, y: 12}];
+        dir = DIRS.right; nextDir = DIRS.right;
+        hazards = buildHazards(level);
+        food = spawnFreeCell();
+        state = 'PLAYING';
+        hideOverlay();
+        updateHud();
+        announce('Level ' + level + ' unlocked. Signal speed increased.');
+      }
+      function togglePause() {
+        if (state === 'PLAYING') { state = 'PAUSED'; showOverlay('Signal Held', 'The berry-radio buffer is paused. Resume when ready.', 'Resume'); announce('Paused'); }
+        else if (state === 'PAUSED') { state = 'PLAYING'; hideOverlay(); announce('Resumed'); }
+      }
+      function showOverlay(title, text, action) { overlayTitle.textContent = title; overlayText.textContent = text; primaryAction.textContent = action; overlay.classList.remove('hidden'); }
+      function hideOverlay() { overlay.classList.add('hidden'); }
+      function announce(text) { live.textContent = text; }
+      function same(a,b){ return a.x === b.x && a.y === b.y; }
+      function occupied(cell) { return snake.some(s => same(s, cell)) || hazards.some(h => same(h, cell)); }
+      function spawnFreeCell() {
+        for (let i = 0; i < 999; i++) {
+          const cell = {x: Math.floor(Math.random() * GRID_W), y: Math.floor(Math.random() * GRID_H)};
+          if (!occupied(cell)) return cell;
+        }
+        return {x: GRID_W - 2, y: GRID_H - 2};
+      }
+      function buildHazards(lvl) {
+        const hs = [];
+        if (lvl < 3) return hs;
+        const count = Math.min(28, (lvl - 2) * 5);
+        for (let i = 0; i < count; i++) {
+          const x = 4 + Math.floor(Math.random() * (GRID_W - 8));
+          const y = 3 + Math.floor(Math.random() * (GRID_H - 6));
+          const nearStart = x < 12 && y > 8 && y < 16;
+          if (!nearStart && !hs.some(h => h.x === x && h.y === y)) hs.push({x,y});
+        }
+        return hs;
+      }
+      function queueDirection(name) {
+        const d = DIRS[name];
+        if (!d) return;
+        if (d.x + dir.x === 0 && d.y + dir.y === 0) return;
+        nextDir = d;
+        if (state === 'TITLE') startGame();
+      }
+      function step() {
+        dir = nextDir;
+        const head = snake[0];
+        const next = {x: head.x + dir.x, y: head.y + dir.y};
+        if (next.x < 0 || next.y < 0 || next.x >= GRID_W || next.y >= GRID_H || snake.some(s => same(s, next)) || hazards.some(h => same(h, next))) {
+          saveBest(); state = 'GAME_OVER'; updateHud(); showOverlay('Signal Crashed', 'The neon vine hit static. Score ' + score + '. Best ' + best + '.', 'Retry Run'); announce('Game over. Score ' + score); return;
+        }
+        snake.unshift(next);
+        if (same(next, food)) {
+          score += 100 + level * 25;
+          eatenThisLevel++;
+          food = spawnFreeCell();
+          saveBest(); updateHud(); announce('Strawberry collected. Score ' + score + '.');
+          if (eatenThisLevel >= target) {
+            state = 'LEVEL_WIN'; saveBest(); updateHud();
+            showOverlay('Transmission Clear', 'Level ' + level + ' complete. The berry-radio signal grows stronger.', 'Next Level');
+            announce('Level complete.');
+          }
+        } else {
+          snake.pop();
+        }
+      }
+      function updateHud() {
+        scoreEl.textContent = score;
+        levelEl.textContent = level;
+        bestEl.textContent = best;
+        speedEl.textContent = (Math.round((145 / tickMs) * 10) / 10) + 'x';
+        targetEl.textContent = target;
+        meterEl.style.width = Math.min(100, (eatenThisLevel / target) * 100) + '%';
+        pauseBtn.textContent = state === 'PAUSED' ? 'Resume' : 'Pause';
+        missionEl.innerHTML = 'Collect <b id="target">' + target + '</b> cyber-strawberries. Level ' + (level >= 3 ? 'firewall pylons are live.' : 'up at full signal.') + ' Gold = AI life.';
+      }
+      function draw() {
+        const w = canvas.width, h = canvas.height, cell = Math.min(w / GRID_W, h / GRID_H);
+        const ox = (w - cell * GRID_W) / 2, oy = (h - cell * GRID_H) / 2;
+        pulse += .018;
+        ctx.clearRect(0,0,w,h);
+        const grad = ctx.createLinearGradient(0,0,w,h);
+        grad.addColorStop(0, 'rgba(7, 5, 18, .28)'); grad.addColorStop(1, 'rgba(39, 5, 50, .52)');
+        ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+        drawGrid(ox, oy, cell);
+        drawHazards(ox, oy, cell);
+        drawFood(ox, oy, cell);
+        drawSnake(ox, oy, cell);
+        drawMascot(w, h);
+      }
+      function drawGrid(ox, oy, cell) {
+        ctx.save(); ctx.translate(ox, oy);
+        ctx.strokeStyle = 'rgba(34,247,255,.15)'; ctx.lineWidth = 1;
+        ctx.shadowColor = 'rgba(34,247,255,.22)'; ctx.shadowBlur = 6;
+        for (let x=0; x<=GRID_W; x++) { ctx.beginPath(); ctx.moveTo(x*cell, 0); ctx.lineTo(x*cell, GRID_H*cell); ctx.stroke(); }
+        for (let y=0; y<=GRID_H; y++) { ctx.beginPath(); ctx.moveTo(0, y*cell); ctx.lineTo(GRID_W*cell, y*cell); ctx.stroke(); }
+        ctx.strokeStyle = 'rgba(255,46,159,.45)'; ctx.lineWidth = 3; ctx.strokeRect(0,0,GRID_W*cell,GRID_H*cell);
+        ctx.restore();
+      }
+      function roundRect(x, y, w, h, r) {
+        ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath();
+      }
+      function drawSnake(ox, oy, cell) {
+        snake.forEach((s, i) => {
+          const x = ox + s.x * cell + 2, y = oy + s.y * cell + 2, size = cell - 4;
+          const hue = i === 0 ? '#fff4a3' : (i % 2 ? '#22f7ff' : '#ff2e9f');
+          ctx.save(); ctx.shadowColor = hue; ctx.shadowBlur = i === 0 ? 22 : 14;
+          ctx.fillStyle = i === 0 ? '#ffd166' : hue;
+          roundRect(x, y, size, size, Math.max(4, cell * .24)); ctx.fill();
+          ctx.fillStyle = 'rgba(7,6,17,.5)';
+          ctx.fillRect(x + size*.22, y + size*.22, size*.18, size*.18);
+          if (i === 0) ctx.fillRect(x + size*.62, y + size*.22, size*.18, size*.18);
+          ctx.restore();
+        });
+      }
+      function drawFood(ox, oy, cell) {
+        const x = ox + food.x * cell, y = oy + food.y * cell;
+        const pad = 2 + Math.sin(pulse * 6) * 1.8;
+        ctx.save(); ctx.shadowColor = '#ff2e9f'; ctx.shadowBlur = 28;
+        if (imgFood.complete) ctx.drawImage(imgFood, x + pad, y + pad, cell - pad*2, cell - pad*2);
+        else { ctx.fillStyle = '#ff466d'; ctx.beginPath(); ctx.arc(x+cell/2,y+cell/2,cell*.4,0,Math.PI*2); ctx.fill(); }
+        ctx.restore();
+      }
+      function drawHazards(ox, oy, cell) {
+        ctx.save(); ctx.shadowColor = '#ff214f'; ctx.shadowBlur = 16; ctx.fillStyle = 'rgba(255,33,79,.82)'; ctx.strokeStyle = '#ffd166';
+        hazards.forEach(h => {
+          const x = ox + h.x*cell + cell*.18, y = oy + h.y*cell + cell*.18, s = cell*.64;
+          ctx.beginPath(); ctx.moveTo(x+s/2,y); ctx.lineTo(x+s,y+s); ctx.lineTo(x,y+s); ctx.closePath(); ctx.fill(); ctx.stroke();
+        });
+        ctx.restore();
+      }
+      function drawMascot(w, h) {
+        if (!imgMascot.complete) return;
+        const size = Math.min(w,h) * .18;
+        ctx.save(); ctx.globalAlpha = .16; ctx.shadowColor = '#ff2e9f'; ctx.shadowBlur = 40;
+        ctx.drawImage(imgMascot, w - size - 20, h - size - 20, size, size);
+        ctx.restore();
+      }
+      function loop(ts) {
+        if (!last) last = ts;
+        const delta = Math.min(80, ts - last); last = ts;
+        if (state === 'PLAYING') {
+          acc += delta;
+          while (acc >= tickMs) { acc -= tickMs; step(); }
+        }
+        updateHud(); draw(); requestAnimationFrame(loop);
+      }
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        canvas.width = Math.max(480, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(360, Math.floor(rect.height * dpr));
+        ctx.imageSmoothingEnabled = false;
+        draw();
+      }
+      window.addEventListener('resize', resize);
+      new ResizeObserver(resize).observe(canvas.parentElement);
+      window.addEventListener('keydown', (e) => {
+        const map = {ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right'};
+        if (map[e.code]) { e.preventDefault(); queueDirection(map[e.code]); }
+        if (e.code === 'Space' || e.code === 'KeyP') { e.preventDefault(); togglePause(); }
+        if (e.code === 'KeyR') { e.preventDefault(); reset(true); }
+        if (e.code === 'Enter' && state !== 'PLAYING') { e.preventDefault(); startGame(); }
+      }, {passive:false});
+      document.querySelectorAll('[data-dir]').forEach(btn => btn.addEventListener('click', () => queueDirection(btn.dataset.dir)));
+      primaryAction.addEventListener('click', () => state === 'PAUSED' ? togglePause() : startGame());
+      pauseBtn.addEventListener('click', togglePause);
+      restartBtn.addEventListener('click', () => reset(true));
+      canvas.addEventListener('pointerdown', e => { startTouch = {x:e.clientX, y:e.clientY}; });
+      canvas.addEventListener('pointerup', e => {
+        if (!startTouch) return;
+        const dx = e.clientX - startTouch.x, dy = e.clientY - startTouch.y;
+        if (Math.hypot(dx,dy) < 24) { if (state === 'TITLE') startGame(); return; }
+        queueDirection(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+      });
+      Promise.all([imgFood.decode().catch(()=>{}), imgMascot.decode().catch(()=>{})]).finally(() => { reset(true); resize(); requestAnimationFrame(loop); });
+    })();
+  </script>
+</body>
+</html>
