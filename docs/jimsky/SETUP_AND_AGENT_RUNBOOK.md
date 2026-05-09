@@ -49,6 +49,13 @@ For a one-shot noninteractive prompt:
 scripts/jimsky-deepseek-safe.sh exec 'Reply with a concise status card for the livestream.'
 ```
 
+For a Program Deck / OBS-readable JSON status file:
+
+```bash
+scripts/jimsky-deepseek-status-json.sh
+cat /opt/data/run/deepseek_tui_live_status.json
+```
+
 ## Recommended defaults
 
 - Normal work: `--approval-policy on-request --sandbox-mode workspace-write`
@@ -68,9 +75,10 @@ test: deepseek --model deepseek-v4-flash ... exec 'Reply exactly ...'
 result: DEEPSEEK_TUI_SMOKE_OK
 ```
 
-Rust source builds were not run because this environment does not currently have `rustc` installed. For source development, install Rust 1.88+ and run:
+Rust source check was run after installing Rust 1.88.0 on this machine:
 
 ```bash
-cargo check --workspace
-cargo test --workspace
+. "$HOME/.cargo/env"
+rustc --version
+cargo check --workspace --locked
 ```

@@ -38,9 +38,21 @@ Program Deck / OBS browser source / fake terminal overlay
 You are the DeepSeek TUI livestream build reviewer. Inspect the current repo state and return a 5-bullet safe status card for viewers. Do not edit files, do not run network commands, and do not print secrets.
 ```
 
+## Status JSON bridge
+
+The stream-safe JSON bridge writes a sanitized status card for Program Deck / OBS browser overlays:
+
+```bash
+cd /opt/data/workspace/projects/DeepSeek-TUI
+scripts/jimsky-deepseek-status-json.sh
+cat /opt/data/run/deepseek_tui_live_status.json
+```
+
+Default output path: `/opt/data/run/deepseek_tui_live_status.json`.
+
 ## Upgrade path
 
 1. Keep this as a Hermes-launched external agent lane using `deepseek exec`.
-2. Add a sanitizer that writes `docs/jimsky/live_status.json` for Program Deck.
+2. Use `scripts/jimsky-deepseek-status-json.sh` as the sanitizer/status JSON bridge for Program Deck.
 3. Optionally run `deepseek serve --http --host 127.0.0.1 --port 7878 --auth-token $DEEPSEEK_RUNTIME_TOKEN` for a localhost-only API bridge.
 4. If used on stream, require a runtime token and bind only to `127.0.0.1`; never expose the runtime API publicly.
